@@ -177,3 +177,57 @@ class FunimationIE(InfoExtractor):
             else:
                 subtitles[language] = [url_element]
         return subtitles
+
+class FunimationShowPlaylistIE(FunimationIE):
+    IE_NAME = 'funimation:playlist'
+    _VALID_URL = r'https?://(?:www\.)?funimation(?:\.com|now\.uk)/shows/(?P<id>[^/?#&]+)'
+
+    _TESTS = [{
+        'url': 'https://www.funimation.com/shows/hacksign/',
+        'info_dict': {
+            'id': 90646,
+            'title': '.hack//SIGN'
+        },
+        'playlist_count': 28,
+        'params': {
+            'skip_download': True,
+        },
+    }]
+
+    def _real_extract(self, url):
+        display_id = self._match_id(url)
+
+        webpage = self._download_webpage(url, display_id)
+        title_data = self._parse_json(self._search_regex(
+            r'TITLE_DATA\s*=\s*({[^}]+})',
+            webpage, 'title data', default=''),
+            display_id, js_to_json, fatal=False) or {}
+        # for testing
+        # title_data = {
+        #     'id': 90646,
+        #     'title': '.hack//SIGN',
+        #     'titleSlug': 'hacksign',
+        #     'seasonNum': 1,
+        #     'type': 'show'
+        # }
+        episode_info = self._download_json(
+            'https://prod-api-funimationnow.dadcdigital.com/api/funimation/episodes/?limit=99999&title_id=%s' % title_data.get('id'),
+            display_id)
+        entries = []
+        for item in episode_info.get('items'):
+            #TODO do i ever need JpnUs?
+            vod_info = item.get('mostRecentSvod') or item.get('mostRecentAvod')
+            episode_id = vod_info.get('item').get('episodeSlug')
+            # episode_id = item.get('mostRecentAvodJpnUs').get('item').get('episodeSlug')
+            #TODO could also be 'mostRecentSvod' 'mostRecentAvod'
+            # episode_url = url + '/' + episode_id #TODO make this more robust
+            episode_url = url + episode_id #TODO make this more robust
+            entries.append(self.url_result(episode_url, 'Funimation')) #TODO add video id and video title here
+        entries.reverse() #TODO entries seem unordered sort by episode number and season
+
+        return {
+            '_type': 'playlist',
+            'id': title_data.get('id'),
+            'title': title_data.get('title'),
+            'entries': entries,
+        }
