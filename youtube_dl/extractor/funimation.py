@@ -210,21 +210,25 @@ class FunimationShowPlaylistIE(FunimationIE):
         #     'seasonNum': 1,
         #     'type': 'show'
         # }
-        episode_info = self._download_json(
+
+        items = self._download_json(
             'https://prod-api-funimationnow.dadcdigital.com/api/funimation/episodes/?limit=99999&title_id=%s' % title_data.get('id'),
-            display_id)
+            display_id).get('items')
+        # for testing
+        # Open a file: file
+        # file = open(r'C:\Users\USER\Desktop\episode_info.json', mode='r')
+        # all_of_it = file.read()
+        # file.close()
+        # episode_info = self._parse_json(
+        #     all_of_it, display_id, js_to_json, fatal=False) or []
+
+        # TODO do i ever need JpnUs?
+        items = list(map(lambda k: (k.get('mostRecentSvod') or k.get('mostRecentAvod')).get('item'), items))
+        items = sorted(items, key=lambda k: k.get('episodeOrder'))
         entries = []
-        for item in episode_info.get('items'):
-            #TODO do i ever need JpnUs?
-            vod_info = item.get('mostRecentSvod') or item.get('mostRecentAvod')
-            #episode_id = vod_info.get('item').get('episodeSlug')
-            episode_info = vod_info.get('item')
-            # episode_id = item.get('mostRecentAvodJpnUs').get('item').get('episodeSlug')
-            #TODO could also be 'mostRecentSvod' 'mostRecentAvod'
-            episode_url = urljoin(url + '/', episode_info.get('episodeSlug'))
-            entries.append(self.url_result(episode_url, 'Funimation', episode_info.get('episodeId'),
-                                           episode_info.get('episodeSlug')))
-        entries.reverse() #TODO entries seem unordered sort by episode number and season
+        for vod_info in items:
+            entries.append(self.url_result(urljoin(url + '/', vod_info.get('episodeSlug')), 'Funimation',
+                                           vod_info.get('episodeId'), vod_info.get('episodeSlug')))
 
         return {
             '_type': 'playlist',
