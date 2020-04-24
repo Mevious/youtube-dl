@@ -217,12 +217,13 @@ class FunimationShowPlaylistIE(FunimationIE):
         for item in episode_info.get('items'):
             #TODO do i ever need JpnUs?
             vod_info = item.get('mostRecentSvod') or item.get('mostRecentAvod')
-            episode_id = vod_info.get('item').get('episodeSlug')
+            #episode_id = vod_info.get('item').get('episodeSlug')
+            episode_info = vod_info.get('item')
             # episode_id = item.get('mostRecentAvodJpnUs').get('item').get('episodeSlug')
             #TODO could also be 'mostRecentSvod' 'mostRecentAvod'
-            # episode_url = url + '/' + episode_id #TODO make this more robust
-            episode_url = url + episode_id #TODO make this more robust
-            entries.append(self.url_result(episode_url, 'Funimation')) #TODO add video id and video title here
+            episode_url = urljoin(url + '/', episode_info.get('episodeSlug'))
+            entries.append(self.url_result(episode_url, 'Funimation', episode_info.get('episodeId'),
+                                           episode_info.get('episodeSlug')))
         entries.reverse() #TODO entries seem unordered sort by episode number and season
 
         return {
